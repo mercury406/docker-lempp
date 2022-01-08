@@ -1,0 +1,65 @@
+version: '3.9'
+
+services:
+  php:
+    build: 
+      context: ./docker/php
+    restart: unless-stopped
+    tty: true
+    environment:
+      SERVICE_NAME: php
+      SERVICE_TAGS: dev
+    working_dir: /var/www/html
+    volumes:
+      - ./www/:/var/www/html
+      - ./docker/php/uploads.ini:/usr/local/etc/php/conf.d/uploads.ini
+    networks:
+      - labnet
+
+
+  nginx:
+    image: nginx:alpine
+    container_name: nginx
+    restart: unless-stopped
+    tty: true
+    ports:
+      - "80:80"
+    depends_on:
+      - php
+    volumes:
+      - ./www/:/var/www/html
+      - ./docker/nginx/conf.d/:/etc/nginx/conf.d/
+    networks:
+      - labnet
+
+
+  db:
+    image: mariadb:10.3
+    restart: unless-stopped
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_PASSWORD}
+    volumes:
+      - ./docker/dbdata:/var/lib/mysql
+    networks:
+      - db
+  
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    restart: unless-stopped
+    depends_on:
+      - db
+    ports:
+      - 8000:80
+    environment:
+      - PMA_HOST=db
+      - PMA_USER=${MYSQL_USER}
+      - PMA_PASSWORD=${MYSQL_PASSWORD}
+      - PMA_ARBITRARY=1
+    networks:
+      - db
+      - labnet
+  
+
+networks:
+  labnet: 
+  db: 
